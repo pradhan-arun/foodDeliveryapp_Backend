@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 
-const DB =`mongodb://localhost:27017/food_app`;
+const DB =`mongodb://localhost:27017/${process.env.DB_NAME}`;
 
 
 const connection = () => {
