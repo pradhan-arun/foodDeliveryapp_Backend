@@ -1,5 +1,20 @@
 const User = require('../models/Users');
 const bcrypt = require('bcrypt');
+const cloudinary = require('cloudinary').v2;
+const otpGenerator = require('otp-generator');
+const twilio = require('twilio');
+const otpStorage = new Map();
+
+
+
+const generateNumericOTP = () => {
+    const length = 6;
+    let otp = '';
+    for (let i = 0; i < length; i++) {
+        otp += Math.floor(Math.random() * 10); // Generates a random digit (0-9)
+    }
+    return otp;
+};
 
 module.exports = {
 
@@ -160,6 +175,50 @@ module.exports = {
 
         } catch (error) {
             return res.status(400).json({ success: false, message: "Something is went wrong" })
+        }
+    },
+
+    uploadAvatar: async (req, res) => {
+        try {
+            console.log("upload avatar == ", req.body.file.uri)
+            cloudinary.uploader.upload(req.body.file.uri).then(result => {
+                console.log("Result = ", result)
+            }).catch(error => {
+                console.log("error from cloudinary =  ", error);
+            })
+        } catch (error) {
+            console.log("error = ", error);
+        }
+    },
+    otpGenerate: async (req, res) => {
+        try {
+            console.log("otp = ", otpGenerator);
+            const { phoneNumber } = req.body;
+
+            // Generate OTP
+            const otp = await generateNumericOTP();
+            console.log("OTP --  ", otp)
+            // Store OTP and associated user data (replace with database operation)
+            otpStorage.set(phoneNumber, { otp, generationTime: new Date() });
+            console.log("otpppp   --  ", otpStorage);
+
+            // Your Twilio credentials
+            const accountSid = 'AC9cb11d75c342a6d63d1c6983a7e3bbdc';
+            const authToken = 'b8d9f827d4f0d35537ee1e203498739e';
+            const twilioClient = twilio(accountSid, authToken);
+
+            await twilioClient.messages
+                .create({
+                    body: `Your OTP is - ${otp} for ${phoneNumber} `,
+                    from: '+15188726608',
+                    to: `+${phoneNumber}`
+                })
+                .then(message => console.log(message.sid))
+
+
+            return res.status(200).json({ success: true, message: "OTP Generate", otp: otp })
+        } catch (error) {
+            return res.status(500).json({ success: false, message: error.message })
         }
     }
 }
